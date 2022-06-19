@@ -1,0 +1,206 @@
+---
+title: "The Effect of Soaking Time, Lid Condition, and Water Volume on the Taste of Instant Cup Noodles"
+author: |
+  | *Name: Liuyi Pan*
+  | *Student ID: 1006211573*
+  | *Section: STA305 H1S Sec L0201, W2022*
+date: "*April 7th, 2022*"
+output: pdf_document
+header-includes:
+   - \usepackage{caption}
+   - \captionsetup[figure]{font=small}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(FrF2)
+library(knitr)
+library(kableExtra)
+```
+
+
+# Introduction
+
+Instant noodle is the second largest convenience food in the world after bread. According to the Facts & Factors report (2020), the global instant noodles market size was valued at $46.75 billion USD in 2020 and is expected to grow at a CAGR of about 6.8% from 2021 to 2028. Likewise in the busy university life, instant noodle has also become the first choice for many students due to its convenience, deliciousness, and cheapness. However, there are actually many factors that influence how to make a good bowl of instant noodle.
+
+Many people prepare instant noodles by boiling random amounts of water, but too much or too little water can make the noodles swollen or too salty. There are also some people who soak their instant noodles for too short of time or even do not put a lid on them, all of which can make the taste of instant noodles much worse. Therefore, this paper, using a factorial design experiment at two levels, investigates three factors that may have significant effects on the taste of instant cup noodles: soaking time, lid condition, and water volume. The results of this study will provide some reference for people to make an easy and delicious bowl of instant noodles to some extent.
+
+
+# Materials and Methods
+## Experimental Design and Data
+
+This experiment employed a $2^3$ factorial design with two quantitative factors --- soaking time and water volume, and one qualitative factor --- lid condition. The two level allocations for each factor are as follows:
+
+- Soaking time:   3 minutes and 5 minutes, recorded as -1 and +1 respectively. 
+- Water volume:   50% and 70%, also recorded as -1 and +1 respectively. 
+- Lid condition:  covered and uncovered, again coded as -1 and +1 respectively.
+
+To complete the eight sets of experiments, I invited eight of my friends. They were randomly assigned to one of the experiments and asked to rate the final taste of the noodles on a scale of 1 (poor) to 10 (excellent). Note that the experiment was conducted with the same type of noodles, Nissin Cup Noodles Beef Flavor. In order to test the variability, I also asked them to find another friend to score the noodles at the same time. By April 1st, I had collected all 16 results as shown in the Table 1 below.
+
+\newpage
+```{r, echo=FALSE}
+# loading data
+noodle <- read.csv("instant_noodles.csv")
+
+lt1 <- noodle[1:8, ]
+lt2 <- noodle[9:16, ] %>% select(-Run)
+kable(list(lt1, lt2), 
+      booktabs = TRUE, 
+      caption = "Instant Cup Noodles Data") %>%
+  kable_styling(font = 7,
+                latex_options = "HOLD_position") 
+```
+
+## Statistical Analysis
+### Interaction Plots
+
+The three interaction plots below show the average taste scores for each pair of factors. The first plot on the left indicates a possible interaction between time and lid condition because the two lines are close to crossing. Whereas the remaining two plots both show nearly parallel patterns, suggesting that there may be no interaction between water and time, and water and lid. I next fit a linear model to see if it is true and further view the effect of each factor.
+
+```{r, fig.cap="Interaction Plots of Instant noodles Taste between Different Time, lid and Water", fig.width=9, fig.height=2, echo=FALSE}
+par(mfrow=c(1,3))
+interaction.plot(noodle$time, noodle$lid, noodle$taste, type = "l", 
+                 xlab = "Time", trace.label = "Lid", ylab = "Taste", ylim = c(3, 9), 
+                 main = "Time v.s. Lid")
+interaction.plot(noodle$time, noodle$water, noodle$taste, type = "l", 
+                 xlab = "Time", trace.label = "Water", ylab = "Taste", ylim = c(3, 9), 
+                 main = "Time v.s. Water")
+interaction.plot(noodle$lid, noodle$water, noodle$taste, type = "l", 
+                 xlab = "lid", trace.label = "Water", ylab = "Taste", ylim = c(3, 9), 
+                 main = "lid v.s. Water")
+```
+
+### Linear Model
+
+$$y_i = \beta_0 + \beta_1x_{i1} + \beta_2x_{i2} + \beta_3x_{i3} + \beta_4x_{i1}x_{i2} + \beta_5x_{i1}x_{i3} + \beta_6x_{i2}x_{i3} + \beta_7x_{i1}x_{i2}x_{i3} + \epsilon_i$$
+
+is the linear model I fit for my factorial experiment, where $x_{i1}$, $x_{i2}$, $x_{i3}$ represent the three factors of soaking time, lid condition, and water volume respectively, i represents the run of each experiment and $\epsilon_i$ is the error term. In addition to the effects of individual factors, this model also considers the interaction effects between the two factors and between the three factors. And here the null and alternative hypotheses are:
+$$H_0:\beta_k=0 \quad vs. \quad H_a:\beta_k \neq 0$$
+where $\beta_{k}$ represents the estimated coefficients for each term, k is in {1,...,7}.
+
+#### Assumptions
+
+\
+
+Moreover, to check the assumptions of the linear model, I then draw the residual plots and normal q-q plot. As can be seen from the Figure 2 (below), there is no discernible pattern in the residual plots and most points are close to the straight diagonal line in the q-q plot, which means the assumptions of independence, constant variance, and normality are satisfied. In addition, the half normal plot reveals that time, lid and water are active with higher effects.
+
+```{r, fig.cap="Assumptions for the Linear Model", fig.height=2, fig.width=9, echo=FALSE}
+# fit linear model
+fit <- lm(taste ~ time*lid*water, data=noodle)
+
+# residual plots
+par(mfrow=c(1,4))
+
+plot(noodle$Run, fit$residuals,
+     xlab = "Run", ylab = "Residuals",main="Residuals vs. Run")
+abline(h=0, lty=2)
+
+plot(fit$fitted.values, fit$residuals, 
+     xlab = "Fitted Values", ylab = "Residuals", main = "Residuals vs. Fitted", pch=20)
+abline(h=0, lty=2)
+
+# qq plot
+qqnorm(fit$residuals)
+qqline(fit$residuals)
+
+# Half normal plot
+DanielPlot(fit, half = TRUE, autolab = F, font = 1)
+```
+
+#### Interpretations
+
+\
+
+The left half of the Table 2 shows the p-values and the corresponding confidence intervals for each effect and interactions. As we can see, the p-values for all individual factor terms are less than 0.05, so we reject the null hypothesis and conclude that there a significant difference on the taste of instant noodles between the two levels of our factors. Although the p-value for the interaction term between time and lid is small, it is larger than 0.05, so we should not include it in our model. Again looking at the 95% confidence interval (CI) for the true value of these effects (the CI of the model multiplied by 2), none of them contain 0. Whereas the four interaction terms: time and lid, time and water, water and lid, time and lid and water, contain 0, indicating that we have no evidence against the null hypothesis so the effects of soaking time, lid condition and water volume on the instant noodle's taste are independent of each other.
+
+Further check main effects for these statistically significant terms, namely twice of corresponding least squares coefficients. From the table on the right we can find the effect for soaking time is 3.125, which means if we change the soaking time from 3 minutes to 5, then the mean taste score of the instant noodle will increases by 3.125 with the other factors unchanged. The effect of the lid factor is 2.125, indicating that the mean taste score of the instant noodle with the lid on is 2.125 higher than without the lid, holding the other two factors equal. In addition, the effect of 1.125 for water volume tells us the average tasting rate will increase by 1.125 when we go from 50% to 70% water. Furthermore, the estimated variance is the same for all effects and is roughly 0.203, which can be calculated by squaring twice the standard error of the coefficients.
+
+```{r, echo=FALSE}
+p_value <- coef(summary(fit))[,4]
+conf <- 2*confint.lm(fit)
+summ <- cbind(p_value,conf)
+
+effect.table <- cbind(2*fit$coefficients[1:8])
+effect_var <- cbind((2*(summary(fit)$coefficients[,2][1:8]))^2)
+effect <- data.frame(Effects = effect.table, Variance = effect_var)
+
+kable(list(summ,effect), 
+      caption = "Summary Table for the Linear Model") %>%
+  kable_classic() %>%
+  kable_styling(font = 7,
+                latex_options = "HOLD_position")
+```
+
+
+
+### New Linear Model
+
+$$y_i = \beta_0 + \beta_1x_{i1} + \beta_2x_{i2} + \beta_3x_{i3} + \epsilon_i$$
+is the new linear model, which only includes three factors. As can be seen from the Table 3, the p-values for effects (soaking time, lid condition and water volume) are all less than 0.05, which means there is strong evidence that the mean taste is different at 3 mins compared to 5 mins, 50% water compared to 70% water, and with a lid compared to no lid. Meanwhile, we can see that soaking time has the largest main effect value (3.125), then the lid (2.125), and finally the proportion of water (1.125).
+
+```{r, echo=FALSE}
+# fit new linear model
+fit_new <- lm(taste ~ time + lid + water, data=noodle)
+coe_new <- coef(summary(fit_new))
+effect.table_new <- cbind(Effects = 2*fit_new$coefficients[1:4])
+summ_new <- cbind(coe_new, effect.table_new)[2:4,]
+kable(summ_new, 
+      caption = "Summary Table for the New Linear Model") %>%
+  kable_classic() %>%
+  kable_styling(font = 6,
+                latex_options = "HOLD_position")
+```
+
+
+
+# Results and Discussion
+
+In this study, a $2^3$ factorial design experiment with replication is conducted to investigate the effects of three factors on the taste of instant cup noodles. Taken together, above analyses suggest that there is an association between the taste of instant noodles with soaking time, lid condition and water volume. Among them, time has the greatest impact on the taste of making instant noodles, which is also the most important thing people need to pay attention to. Furthermore, Table 4 provides the fitted values of the taste scores obtained from the new model. It is clear from this table that the instant noodle soaked for 5 minutes, with a lid and 70% water  (*Time = Lid = Water = 1*) is our best choice, while the instant noodle soaked for only 3 minutes, uncovered and with only 50% water (*Time = Lid = Water = -1*) will give the worst taste.
+
+However, it is worth noting that the time, place and expectation of eating instant noodles may affect the taste score. Future experiment could be set at the same time and place and ask people to rate the instant cup noodles without knowing what the combination is.
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# fit new linear model
+fit_new <- lm(taste ~ time + lid + water, data=noodle)
+fitted_values <- fit_new$fitted.values
+result <- data.frame(Time = noodle$time, Lid = noodle$lid, Water = noodle$water, fitted_values) %>% 
+  group_by(Time, Lid, Water) %>% 
+  summarise(Fitted_values =  mean(fitted_values)) %>% 
+  arrange(desc(Fitted_values))
+
+kable(result, caption = "Fitted Value of New Linear Model") %>%
+  kable_classic() %>%
+  kable_styling(font = 6,
+                latex_options = "HOLD_position")
+```
+
+\
+
+All analysis for this report was programmed using `R version 4.0.5`. Packages used for this report include `dplyr::tidyverse`(Wickham et al., 2021), `knitr::kable`(Xie, 2021), `kableExtra`(Zhu, 2021), and `FrF2`(Gr"omping, 2014) packages.
+
+# References
+
+- Hadley Wickham, Romain François, Lionel Henry and Kirill Müller (2021). *dplyr: A Grammar of Data Manipulation*. [https://dplyr.tidyverse.org](https://dplyr.tidyverse.org), [https://github.com/tidyverse/dplyr](https://github.com/tidyverse/dplyr).
+
+- Hao Zhu (2021). *kableExtra: Construct Complex Table with 'kable' and Pipe Syntax*. [http://haozhu233.github.io/kableExtra/](http://haozhu233.github.io/kableExtra/),
+[https://github.com/haozhu233/kableExtra](https://github.com/haozhu233/kableExtra).
+
+- *Instant noodles market size, share, trends - global forecast to 2028: Facts & Factors*. Facts and Factors. (2020). Retrieved April 3, 2022, from [https://www.fnfresearch.com/instant-noodles-market](https://www.fnfresearch.com/instant-noodles-market)
+
+- Yihui Xie (2021). *knitr: A General-Purpose Package for Dynamic Report Generation in R.* R package version 1.34.
+
+- Ulrike Gr"omping (2014). R Package FrF2 for Creating and Analyzing Fractional Factorial 2-Level Designs. Journal of Statistical Software, 56(1), 1-56. URL [http://www.jstatsoft.org/v56/i01/](http://www.jstatsoft.org/v56/i01/)
+
+
+
+
+
+
+
+
+
+
+
+
+
